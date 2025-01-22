@@ -7,8 +7,12 @@ import {
   useState,
   createContext,
   useContext,
+  useRef,
+  useEffect,
   useCallback,
   useMemo,
+  memo,
+  Profiler,
 } from "react";
 import { useReducer } from "./MyReact";
 import Header from "./components/Header";
@@ -377,6 +381,7 @@ how to migrate useState to useReducer
 1. move from setting state to dispatching actions
 2. write a reducer function
 3. use the reducer from my component */
+
 const App = () => {
   /*  - when to use reducers - when a component becomes too big, hard to read 
 or debug because of its state logic, use reducers to separate the state logic 
@@ -657,24 +662,24 @@ dispatch function - receives an action object as an argument, which gets passed
     );
   }
 
-  function counterReducer(state, action) {
-    /* 2. based on the action object, counterReducer calculates and 
-    returns the next state */
-    if (action.type === "increment_age") {
-      return {
-        /* not modifying state, insterad returning a new obejct from
-        my reducer */
-        age: state.age + 1,
-      };
-    }
-  }
-
   function Counter() {
     /* 3. uses the reducer from my component 
     useReducer takes counterReducer and the initial state, and returns
     the next state (calculated by counterReducer) and a way to set the 
     next state (the dispatch function) */
     const [state, dispatch] = useReducer(counterReducer, { age: 42 });
+
+    function counterReducer(state, action) {
+      /* 2. based on the action object, counterReducer calculates and 
+      returns the next state */
+      if (action.type === "incremented_age") {
+        return {
+          /* not modifying state, insterad returning a new obejct from
+          my reducer */
+          age: state.age + 1,
+        };
+      }
+    }
 
     return (
       <>
@@ -692,6 +697,168 @@ dispatch function - receives an action object as an argument, which gets passed
       </>
     );
   }
+
+  /* useRef lets be manage a value that's not needed for rendering
+  1. if I want a component to remember some info, but I don't want that info to 
+     trigger new renders 
+     - used when performing imperative action or accessing specific elements 
+       rendered in the DOM 
+  2. if I want to persist values throughout the component's lifecycle, so the
+     value of the ref won't be destroyed every time a component re-renders 
+  1. useRef provides a way to access and interact with DOM elements; useRef 
+  can be used for: 
+  - scrolling to a specific position
+  - measuring the dimensions of an element
+  - triggering animations */
+  function ButtonComponent() {
+    /* creates a ref object buttonRef with a current property of initially 
+    set to null 
+    useRef creates a mutable reference, allowing me to update its value without
+    triggering a re-render
+    useState manages an immutable state that triggers re-renders when updated */
+    const buttonRef = useRef(null);
+
+    /* handles side effects (data fetching, subscription, or manually updating
+    DOM) */
+    useEffect(() => {
+      // side effect is to call focus method of the button element, makes it active
+      buttonRef.current.focus();
+      // change the button's text
+      buttonRef.current.textContent = "Hey, I'm different!";
+      // after 2 sec, change the text back
+      let timeout = setTimeout(() => {
+        buttonRef.current.textContent = "Click Me!";
+      }, 2000);
+      /* useEffect will get executed once on the mount of the component 
+      it will never trigger a component re-render */
+    }, []);
+
+    // establishes a connection between the buttonRef and the button in the DOM
+    return <button ref={buttonRef}>Click Me!</button>;
+  }
+
+  /* rendering and painting of the screen comes before React runs the useEffect,
+    the connection between the ref and button is already established before the 
+    effect is executed */
+
+  /* memoization - optimizes expensive or complex calculations, where it caches
+                     the result of a function call and stores it to be used later
+                     without recalculating it 
+    memoized value get recalculated only when the dependencies of the useMemo hook changes 
+    has the same two arguments as useEffect, a calculateValue callback and a dependencies array 
+  function Cart({ products }) {
+    /* this way, whenever a user opens/closes the cart multiple times, the app won't recalculate 
+    the totalPrice and use the cached value as long as products did not change 
+    const totalPrice = useMemo(() => {
+      products.reduce(
+        (total, product) => total + product.price * product.quantity,
+        0
+      );
+      /* useMemo will execute the callback on mount, and on subsequent re-renders, it will only
+    re-execute the callback whenever one of the dependencies changes 
+    }, [products]);
+
+    return (
+      <div>
+        {/* some other content in the cart 
+};
+{
+  /* products to display 
+        <p>
+          Total Price: <strong>${totalPrice}</strong>
+        </p>
+        {/* some button to checkout 
+      </div>
+    );
+  }
+
+  /* now this component will only re-render when its props change or if its 
+  own state changes 
+  const ButtonComponentOne = memo(({ children, onClick }) => {
+    let i = 0;
+    let j = 0;
+    const ITERATION_COUNT = 10_000;
+    while (i < ITERATION_COUNT) {
+      while (j < ITERATION_COUNT) {
+        j + 1;
+      }
+      i += 1;
+      j = 0;
+    }
+
+    return (
+      <button type="button" onClick={onClick}>
+        {children}
+      </button>
+    );
+  });
+
+  function CounterOne() {
+    const [count, setCount] = useState(0);
+    const durationRef = useRef({ baseDuration: 0, actualDuration: 0 });
+
+    const handleClick = () => {
+      setCount((prevState) => prevState + 1);
+    };
+
+    /* caches the function reference and uses an empty dependency array so that
+    it won't change 
+    const memoizedHandleClick = useMemo(() => handleClick, []);
+    /* ButtonComponentOne will still re-render because whenever a component's state
+    changes, it will also re-render its children 
+    memo wrapper function lets me skip re-rendering a component when its props are
+    unchanged (even if its parent re-renders) */
+  // const handleClick = useMemo(
+  // first arrow is useMemo's calculateValue callback
+  /* second arrow is my function that will be called later, the one that's the 
+      cached value and what's stored in handleClick 
+    // () => () => setCount((prevState) => prevState + 1),
+    // []
+    // );
+
+    const onRender = (_id, _phase, actualDuration, baseDuration) => {
+      durationRef.current = { actualDuration, baseDuration };
+    };
+
+    return (
+      <div>
+        <Profiler id="buttoncomponentone" onRender={onRender}>
+          <h1>{count}</h1>
+          <ButtonComponentOne onClick={handleClick}>
+            Click me!
+          </ButtonComponentOne>
+        </Profiler>
+        <div>
+          <h2>Base Duration:</h2>
+          <p>
+            <strong>{durationRef.current.baseDuration}</strong>
+            <span>
+              {" "}
+              - The number of milliseconds estimating how much time it would
+              take to re-render the entire Profile subtree without any
+              optimizations. It is calculated by summing up the most recent
+              render durations of each component in the tree. This value
+              estimates a worst-case cost of rendering (e.g. the initial mount
+              or a tree with no memoization). Compare actualDuration against it
+              to see if memoization is working.
+            </span>
+          </p>
+          <h2>Actual Duration:</h2>
+          <p>
+            <strong>{durationRef.current.actualDuration}</strong>
+            <span>
+              {" "}
+              - The time spent rendering the Profiler component and its
+              descendant for the current update, 0 means it rendered extremely
+              fast! This will be the same as the Base Duration on the first
+              render
+            </span>
+          </p>
+        </div>
+      </div>
+    );
+  } */
+
   return (
     <>
       <div>
@@ -708,6 +875,7 @@ dispatch function - receives an action object as an argument, which gets passed
           dispatch={dispatch}
         />
       </div>
+
       {/* ContextObject.Provider - Provider component accepts a prop called
       value, which is the context value that's going to be passed down to the
       components no matter how deeply they're nested 
@@ -896,6 +1064,8 @@ dispatch function - receives an action object as an argument, which gets passed
       <TaskAppOne />
       <Messenger />
       <Counter />
+      <ButtonComponent />
+      {/* <CounterOne /> */}
     </>
   );
 };
@@ -904,3 +1074,24 @@ export default App;
 
 /* two other advanced React patterns used for component compositions:
 render prop components and higher-order components */
+
+/* vanilla JS's imperative programming approach - I manually specify every 
+step to manipulate the DOM and manage app state
+- I'm focused on how to update the UI
+React's declarative programming approach - I describe the descired outcome
+and the framework handles the underlying steps to update the DOM
+- I'm focused on what the UI should look like, based on state 
+
+when a state gets changed, React tries to re-render the component, and it 
+will destroy all local variables not controlled by React and re-execute them
+
+React hooks - special functions that allow me to use state and other features
+              in functional components without using class components
+Explore useRef hook and its use cases
+  Why should I prefer useRef hook over other DOM manipulation methods like
+  querySelector?
+Explain memoization and how useCallback and useMemo can be used 
+  What is the difference between useMemo and useCallback?
+  How do useMemo and useCallback help optimize the performance of React
+  components?
+  When should I memoize a value? */

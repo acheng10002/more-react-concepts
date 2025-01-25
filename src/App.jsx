@@ -3,7 +3,7 @@ value of the context, and returns a context object that can be used to
 passed down data to components 
 
 hooks allow me to have function components with state and side-effects */
-import {
+import React, {
   useState,
   createContext,
   useContext,
@@ -698,13 +698,14 @@ dispatch function - receives an action object as an argument, which gets passed
     );
   }
 
-  /* useRef lets be manage a value that's not needed for rendering
+  /* useRef lets me manage, reference, a value that's not needed for rendering
   1. if I want a component to remember some info, but I don't want that info to 
-     trigger new renders 
-     - used when performing imperative action or accessing specific elements 
-       rendered in the DOM 
-  2. if I want to persist values throughout the component's lifecycle, so the
-     value of the ref won't be destroyed every time a component re-renders 
+     trigger new renders/ referencing a value with ref
+  2. used when performing imperative action or accessing specific elements 
+       rendered in the DOM/ manipulating the DOM with a ref 
+  3. . if I want to persist values throughout the component's lifecycle, so the
+     value of the ref won't be destroyed every time a component renders/ avoiding
+     recreating the ref contents  
   1. useRef provides a way to access and interact with DOM elements; useRef 
   can be used for: 
   - scrolling to a specific position
@@ -735,6 +736,154 @@ dispatch function - receives an action object as an argument, which gets passed
 
     // establishes a connection between the buttonRef and the button in the DOM
     return <button ref={buttonRef}>Click Me!</button>;
+  }
+
+  // another example of using a ref to manipulate the DOM
+  function Form() {
+    // 1. declare a ref object with an initial value of null
+    const inputRef = useRef(null);
+
+    function handleClick() {
+      /* 3. React creates the DOM node and puts it on the screen
+      4. React sets up the current property of my ref object to that DOM node 
+      5. I can then access the DOM node and call methods like focus() 
+      React will set the current property back to null when the node is
+      removed from the screen */
+      inputRef.current.focus();
+    }
+
+    return (
+      <>
+        {/* 2. ref object gets passed as the ref attribute to the JSX of the DOM node 
+        I want to manipulate */}
+        <input ref={inputRef} />
+        <button onClick={handleClick}>Focus the input</button>
+      </>
+    );
+  }
+
+  function CatFriends() {
+    // 1. ref object with an initial value of null
+    const listRef = useRef(null);
+
+    function scrollToIndex(index) {
+      /* 3. React creates the DOM node and puts it on the screen
+      4. React sets up the current property of my ref object to that DOM node 
+      5. I can then access the DOM node and call methods */
+      const listNode = listRef.current;
+      /* This line assumes a particular DOM structure: 
+      finds all the img elements directly nested inside li elements within listNode 
+      access the image at the specified index from the resulting NodeList */
+      const imgNode = listNode.querySelectorAll("li > img")[index];
+      // scrolls the imgNode into the viewport
+      imgNode.scrollIntoView({
+        // scrolls smoothly instead of instantly
+        behavior: "smooth",
+        /* aligns the element's vertical position as closely as possible to the 
+        visible area */
+        block: "nearest",
+        // centers the element horizontally in the viewport
+        inline: "center",
+      });
+    }
+
+    return (
+      <>
+        <nav>
+          <button onClick={() => scrollToIndex(0)}>Neo</button>
+          <button onClick={() => scrollToIndex(1)}>Millie</button>
+          <button onClick={() => scrollToIndex(2)}>Bella</button>
+        </nav>
+        <div>
+          {/* 2. ref object gets passed as ref attribute to DOM node's JSX */}
+          <ul ref={listRef}>
+            <li>
+              <img src="https://placecats.com/neo/300/200" alt="Neo" />
+            </li>
+            <li>
+              <img src="https://placecats.com/millie/200/200" alt="Millie" />
+            </li>
+            <li>
+              <img src="https://placecats.com/bella/199/200" alt="Bella" />
+            </li>
+          </ul>
+        </div>
+      </>
+    );
+  }
+
+  function VideoPlayer() {
+    const [isPlaying, setIsPlaying] = useState(false);
+    const ref = useRef(null);
+
+    function handleClick() {
+      // opposite of isPlaying is assigned to nextIsPlaying
+      const nextIsPlaying = !isPlaying;
+      // sets isPlaying to its opposite
+      setIsPlaying(nextIsPlaying);
+
+      // if nextIsPlaying is true
+      if (nextIsPlaying) {
+        /* React sets up the current property of my ref object to the video
+        accesses video and call play method */
+        ref.current.play();
+      } else {
+        // if nextIsPlaying is false, accesses video and calls pause method
+        ref.current.pause();
+      }
+    }
+
+    return (
+      <>
+        <button onClick={handleClick}>{isPlaying ? "Pause" : "Play"}</button>
+        <video
+          width="250"
+          ref={ref}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+        >
+          <source
+            src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+            type="video/mp4"
+          />
+        </video>
+      </>
+    );
+  }
+
+  /* React.forwardRef is needed to forward the ref from the parent FormONe 
+  component to the DOM element inside the MyInput child component */
+  const MyInput = React.forwardRef((props, ref) => {
+    return <input {...props} ref={ref} />;
+  });
+
+  /* creates a ref in the parent FormOne component and passes the
+  ref as a prop to the child component, letting the parent manipulate
+  the DOM inside of my component */
+  function FormOne() {
+    const inputRef = useRef(null);
+
+    function handleClick() {
+      inputRef.current.focus();
+    }
+
+    return (
+      <>
+        <MyInput ref={inputRef} />
+        <button onClick={handleClick}>Focus the input</button>
+      </>
+    );
+  }
+
+  // avoids recreating the ref contents
+  function Video() {
+    const playerRef = useRef(null);
+    if (playerRef.current === null) {
+      /* result of new VideoPlayer() is only used for the initial render, and
+        not calling this function on every render because the condition only
+        executes during initialization */
+      playerRef.current = new VideoPlayer();
+    }
   }
 
   /* rendering and painting of the screen comes before React runs the useEffect,
@@ -770,95 +919,416 @@ dispatch function - receives an action object as an argument, which gets passed
         {/* some button to checkout 
       </div>
     );
+  } */
+
+  function Stopwatch() {
+    /* parameter is initialValue I want the ref obkect's current property to be,
+    it can be any type, and it's ignored after the initial render 
+    useRef returns a ref object with the current property 
+    if the ref object object is passed to React as a ref attribute, React will 
+    set its current property 
+    on the next renders, useRef will return the same object */
+    const intervalRef = useRef(0);
+    // ...
   }
 
-  /* now this component will only re-render when its props change or if its 
-  own state changes 
-  const ButtonComponentOne = memo(({ children, onClick }) => {
-    let i = 0;
-    let j = 0;
-    const ITERATION_COUNT = 10_000;
-    while (i < ITERATION_COUNT) {
-      while (j < ITERATION_COUNT) {
-        j + 1;
-      }
-      i += 1;
-      j = 0;
+  function handleStartClick() {
+    const intervalId = setInterval(() => {
+      // ...
+    }, 1000);
+    /* changing a ref does not trigger a re-render 
+    to update the value inside the ref, I need to manually change its current property */
+    intervalRef.current = intervalId;
+  }
+
+  function handleStopClick() {
+    // I can read the interval ID from the ref so that I can call clear that interval
+    const intervalId = intervalRef.current;
+    clearInterval(intervalId);
+  }
+
+  // referencing a value with a ref
+  function StopwatchOne() {
+    const [startTime, setStartTime] = useState(null);
+    const [now, setNow] = useState(null);
+    const intervalRef = useRef(null);
+
+    function handleStart() {
+      setStartTime(Date.now());
+      setNow(Date.now());
+
+      clearInterval(intervalRef.current);
+      /* setInterval continuously updates the now state to the current timestamp
+      that way, the stopwatch display updates in real time */
+      intervalRef.current = setInterval(() => {
+        setNow(Date.now());
+      }, 10);
+    }
+
+    function handleStop() {
+      clearInterval(intervalRef.current);
+    }
+
+    let secondsPassed = 0;
+    if (startTime != null && now != null) {
+      secondsPassed = (now - startTime) / 1000;
     }
 
     return (
-      <button type="button" onClick={onClick}>
-        {children}
-      </button>
+      <>
+        <h1>Time passed: {secondsPassed.toFixed(3)}</h1>
+        <button onClick={handleStart}>Start</button>
+        <button onClick={handleStop}>Stop</button>
+      </>
     );
-  });
+  }
 
-  function CounterOne() {
+  /* custom hook that sets up an interval and clears it after unmounting 
+  it's a combo of setInterval and clearInterval tied to the component lifecycle 
+  callback is the function I want to execute repeatedly
+  delay is the interval duration 
+  if delay is null, the interval is paused */
+  function useInterval(callback, delay) {
+    /* the savedCallback ref object will store the latest version of the callback,
+    will persist across renders without reinitializing, and updates to the ref won't
+    trigger a re-render 
+    useRef returns a object with a mutable current property that's shared between 
+    renders */
+    const savedCallback = useRef();
+
+    /* the latest interval callback gets saved into the ref object
+    ensures savedCallback reference always points to the most recent callback */
+    useEffect(() => {
+      savedCallback.current = callback;
+      /* this useEffect runs whenever the callback changes 
+      when the interval calls savedCallback.current(), it always executes the latest
+      version of the function */
+    }, [callback]);
+
+    // sets up the interval
+    useEffect(() => {
+      // defines how tick invokes the callback stored in savedCallback
+      function tick() {
+        /* when the interval triggers, tick will execute, and tick uses
+        savedCallback.current() to ensure it always has the latest version
+        of the callback */
+        savedCallback.current();
+      }
+      // if delay is null, the interval is paused, and no setInterval is created
+      if (delay !== null) {
+        /* I can read and call the ref object from inside my interval 
+        if delay is valid, a new interval is created 
+        creates an interval that executes the tick every delay ms */
+        let id = setInterval(tick, delay);
+        // clears the interval after component's unmounting, or when delay changes
+        return () => clearInterval(id);
+      }
+      // when delay changes, effect re-runs, stops the previous interval, starts a new one
+    }, [delay]);
+  }
+
+  function CounterTwo() {
+    let [count, setCount] = useState(0);
+    let [delay, setDelay] = useState(1000);
+    const [isRunning, setIsRunning] = useState(true);
+
+    useInterval(
+      () => {
+        setCount(count + 1);
+      },
+      isRunning ? delay : null
+    );
+
+    function handleDelayChange(e) {
+      setDelay(Number(e.target.value));
+    }
+
+    return (
+      <>
+        <h1>{count}</h1>
+        <input value={delay} onChange={handleDelayChange} />
+      </>
+    );
+  }
+
+  function CounterThree() {
     const [count, setCount] = useState(0);
-    const durationRef = useRef({ baseDuration: 0, actualDuration: 0 });
 
-    const handleClick = () => {
-      setCount((prevState) => prevState + 1);
+    // side effect that needs cleanup
+    useEffect(() => {
+      let id = setInterval(() => {
+        setCount(count + 1);
+      }, 1000);
+      // returns the cleanup function
+      return () => clearInterval(id);
+    });
+    return <h1>{count}</h1>;
+  }
+
+  function CounterFour() {
+    const [count, setCount] = useState(0);
+    /* savedCallback ref object has mutable current property that's shared 
+    between renders and will persist across re-renders */
+    const savedCallback = useRef();
+
+    function callback() {
+      // can read fresh props, state, etc.
+      setCount(count + 1);
+    }
+
+    useEffect(() => {
+      // latest interval callback can be saved into current
+      savedCallback.current = callback;
+    });
+
+    useEffect(() => {
+      function tick() {
+        savedCallback.current();
+      }
+      /* then the latest interval callback can be read and called from inside 
+      the interval */
+      let id = setInterval(tick, 1000);
+      return () => clearInterval(id);
+      // the effect never re-executes, and the interval doesn't get reset
+    }, []);
+
+    /* thanks to savedCallback ref, I can always read the callback that I set
+    after the last render, and call it from the interval tick */
+
+    return <h1>{count}</h1>;
+  }
+  /* many subscription APIs can remove the old listener and add a new listener at 
+  any time, setInterval cannot do that 
+  when clearInterval and setInterval are run, their timings shift 
+  if re-rendering and re-applying effects happen too often, the interval never 
+  gets a change to fire */
+
+  /* information in ref is local to each copy of my component, unlike the variables 
+  outside which are shared 
+  
+  function MyComponent() {
+  // ...
+  // 🚩 Don't write a ref during rendering
+  myRef.current = 123;
+  // ...
+  // 🚩 Don't read a ref during rendering
+  return <h1>{myOtherRef.current}</h1>;
+}
+
+if I have to read or write something during render, use state instead
+
+function MyComponent() {
+  // ...
+  useEffect(() => {
+    // ✅ You can read or write refs in effects
+    myRef.current = 123;
+  });
+  // ...
+  function handleClick() {
+    // ✅ You can read or write refs in event handlers
+    doSomething(myOtherRef.current);
+  }
+  // ...
+} 
+  */
+
+  function FormComponent() {
+    // const [name, setName] = useState("");
+    // instead, create a reference using useRef
+    const inputRef = useRef(null);
+    // store the error state
+    const [error, setError] = useState(false);
+
+    const handleSubmit = (e) => {
+      /* in React, better to use useRef hook, using the virtual DOM, than use the 
+      document object's API
+      manipulating the DOM directly with these APIs/methods can lease to unexpected
+      behaviors:
+      1. race conditions - when multiple components are trying to manipulate the same
+                           DOM element
+         ex. one component might remove an element from the DOM while another is still
+         trying to manipulate it
+      2. accessibility issues - ex. if I manipulate the DOM in a way that changes the
+         order or structure of the content, it can make it hard for users who use 
+         screen readers and other assistive technologies to access the info
+      3. inefficient updates - direct DOM manipulation means the browser needs to 
+                               recalculate the layout and repaint the affected elements,
+                               which can be a slow and expensive operation 
+                               
+      useRef creates a reference to a DOM element and accesses its properties and methods
+      without any of the complexities of 1, 2, or 3 */
+      // const nameInput = document.querySelector("#name").value;
+
+      // checks if the input field is empty, and if it is, an alert is fired
+      /* if (nameInput === "") {
+        alert("name cannot be blank");
+      } */
+      e.preventDefault();
+      // have the reference access the input element's value
+      const value = inputRef.current.value;
+
+      // update error state based on the input value
+      if (!value) {
+        setError(true);
+      } else {
+        // submit the form
+      }
     };
 
-    /* caches the function reference and uses an empty dependency array so that
-    it won't change 
-    const memoizedHandleClick = useMemo(() => handleClick, []);
-    /* ButtonComponentOne will still re-render because whenever a component's state
-    changes, it will also re-render its children 
-    memo wrapper function lets me skip re-rendering a component when its props are
-    unchanged (even if its parent re-renders) */
-  // const handleClick = useMemo(
-  // first arrow is useMemo's calculateValue callback
-  /* second arrow is my function that will be called later, the one that's the 
-      cached value and what's stored in handleClick 
-    // () => () => setCount((prevState) => prevState + 1),
-    // []
-    // );
+    const handleChange = () => {
+      // setName(e.target.value);
+      const value = inputRef.current.value;
 
-    const onRender = (_id, _phase, actualDuration, baseDuration) => {
-      durationRef.current = { actualDuration, baseDuration };
+      // update error state based on the input value
+      if (value) {
+        setError(false);
+      }
     };
 
     return (
+      <form onSubmit={handleSubmit}>
+        <input
+          // id="name"
+          // name="full name"
+          type="text"
+          ref={inputRef}
+          // value={name}
+          onChange={handleChange}
+          // placeholder="full name"
+        />
+        <button type="submit">Submit</button>
+        {/* render error message if the error state is true */}
+        {error && <p>name field cannot be blank!</p>}
+      </form>
+    );
+  }
+
+  /* I can alter the style of an element in vanilla JS 
+  const element = document.querySelector('#element');
+  element.style.display = 'none'; */
+  const RefExample = () => {
+    const boxRef = useRef(null);
+    /* isAnimating state keeps track of whether or not the animation is currently
+    playing */
+    const [isAnimating, setIsAnimating] = useState(false);
+
+    function handleStartAnimation() {
+      setIsAnimating(true);
+      /* creates a reference to the div element I want animate 
+      transform property is applied to the boxRef.current element using the DOM API */
+      boxRef.current.style.transform = "translateX(300px)";
+      /* resets the element's transform property after 1 second, allowing the element
+      to return to its original position and complete the animation */
+      setTimeout(() => {
+        setIsAnimating(false);
+        boxRef.current.style.transform = "";
+      }, 1000);
+    }
+
+    return (
+      <div className="App">
+        <div
+          // CSS class allows additional styling to the element during the animation
+          className={`box ${isAnimating ? "is-animating" : ""}`}
+          ref={boxRef}
+        >
+          <p>Hello, I'm an animated box!</p>
+        </div>
+        <button onClick={handleStartAnimation}>Start Animation</button>
+      </div>
+    );
+  };
+
+  function CandyDispenser() {
+    const initialCandies = ["snickers", "skittles", "twix", "milky way"];
+    const [candies, setCandies] = useState(initialCandies);
+    const dispense = (candy) => {
+      setCandies((allCandies) => allCandies.filter((c) => c !== candy));
+    };
+    /* on the second render of the component, the original dispense function 
+    gets garbage collected, freeing up memory, and then a new one is created
+    with useCallback, the original dispense won't get garbage collected, and
+    a new one is created */
+
+    // const dispenseCallback = useCallback(dispense, []);
+    /* reasons why useMemo and useCallback are built into React:
+    referential equality and computationally expensive calculations
+    when I define an object inside my component, it is not going to be 
+    referentially equal to the alst time that same object was defined 
+    
+    objects, arrays, and functio in JavaScript are compared by reference,
+    not by value
+    each object has a unique reference in memory
+    even if two objects have the same content, they are considered distinct 
+    if they don't share the same reference 
+    a variable always has the same reference to the obejct it points to */
+
+    /*
+    function CountButton({ onClick, count }) {
+      return <button onClick={onClick}>{count}</button>
+    }
+    
+    function DualCounter() {
+      const [count1, setCount1] = React.useState(0)
+      const increment1 = () => setCount1((c) => c + 1)
+    
+      const [count2, setCount2] = React.useState(0)
+      const increment2 = () => setCount2((c) => c + 1)
+    
+      return (
+        <>
+          <CountButton count={count1} onClick={increment1} />
+          <CountButton count={count2} onClick={increment2} />
+        </>
+      )
+    }
+    */
+    /* this is an escape hatch for situations when rendering takes a substantial
+    amount of time (highly interactive graphics, charts, animations, React will 
+    only re-render 'CountButton' when its props change */
+    const CountButton = memo(function CountButton({ onClick, count }) {
+      return <button onClick={onClick}>{count}</button>;
+    });
+
+    /* increment1 and increment2 function are defined within the component 
+    functions, meaning every time DualCounter is re-rendered, those functions
+    will be new and React will re-render both of the CountButtons anyway 
+    this avoids unnecessary re-renders of CountButton */
+    function DualCounter() {
+      const [count1, setCount1] = useState(0);
+      const increment1 = useCallback(() => setCount1((c) => c + 1), []);
+
+      const [count2, setCount2] = useState(0);
+      const increment2 = useCallback(() => setCount2((c) => c + 1), []);
+
+      return (
+        <>
+          <CountButton count={count1} onClick={increment1} />
+          <CountButton count={count2} onClick={increment2} />
+        </>
+      );
+    }
+
+    return (
       <div>
-        <Profiler id="buttoncomponentone" onRender={onRender}>
-          <h1>{count}</h1>
-          <ButtonComponentOne onClick={handleClick}>
-            Click me!
-          </ButtonComponentOne>
-        </Profiler>
+        <h1>Candy Dispenser</h1>
         <div>
-          <h2>Base Duration:</h2>
-          <p>
-            <strong>{durationRef.current.baseDuration}</strong>
-            <span>
-              {" "}
-              - The number of milliseconds estimating how much time it would
-              take to re-render the entire Profile subtree without any
-              optimizations. It is calculated by summing up the most recent
-              render durations of each component in the tree. This value
-              estimates a worst-case cost of rendering (e.g. the initial mount
-              or a tree with no memoization). Compare actualDuration against it
-              to see if memoization is working.
-            </span>
-          </p>
-          <h2>Actual Duration:</h2>
-          <p>
-            <strong>{durationRef.current.actualDuration}</strong>
-            <span>
-              {" "}
-              - The time spent rendering the Profiler component and its
-              descendant for the current update, 0 means it rendered extremely
-              fast! This will be the same as the Base Duration on the first
-              render
-            </span>
-          </p>
+          <div>Available Candy</div>
+          {candies.length === 0 ? (
+            <button onClick={() => setCandies(initialCandies)}>refill</button>
+          ) : (
+            <ul>
+              {candies.map((candy) => (
+                <li key={candy}>
+                  <button onClick={() => dispense(candy)}>grab</button> {candy}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     );
-  } */
-
+  }
   return (
     <>
       <div>
@@ -1065,7 +1535,18 @@ dispatch function - receives an action object as an argument, which gets passed
       <Messenger />
       <Counter />
       <ButtonComponent />
-      {/* <CounterOne /> */}
+      <CandyDispenser />
+      <Stopwatch />
+      <StopwatchOne />
+      <Form />
+      <CatFriends />
+      <VideoPlayer />
+      <FormOne />
+      <FormComponent />
+      <RefExample />
+      <CounterTwo />
+      <CounterThree />
+      <CounterFour />
     </>
   );
 };

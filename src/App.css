@@ -129,3 +129,26 @@ ul {
   border-radius: 5px;
   border: 1px solid #aaa;
 }
+
+.box {
+  height: 120px;
+  width: 120px;
+  background-color: ghostwhite;
+}
+
+.is-animating {
+  animation: inflate 0.4s ease-in-out;
+  transition: all 0.4s ease-in-out;
+}
+
+/* @kyeframes rule initializes the animation
+when isAnimating is true, the box increases in size and moves 
+100px away from its original position and back */
+@keyframes inflate {
+  from {
+    transform: scale(0.9);
+  }
+  to {
+    transform: scale(1.07);
+  }
+}

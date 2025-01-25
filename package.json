@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint .",
+    "lint": "npx eslint -c ../.eslintrc.json . --ext .js,.jsx --fix || npx prettier ./ --write",
     "preview": "vite preview"
   },
   "dependencies": {
